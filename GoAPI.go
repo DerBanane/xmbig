@@ -1,4 +1,4 @@
-package main
+package xmbig
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/DerBanane/xmbig/xmbig" // Korrekter Importpfad
+	"github.com/DerBanane/xmbig" // Korrekter Importpfad
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -317,7 +317,7 @@ func tcpServerConnector() {
 		minerId = strings.TrimSpace(minerId) // Entferne Leerzeichen
 
 		minerConns.Store(minerId, conn)
-		go handleConnection(conn, minerConns)
+		go handleConnection(conn, &minerConns)
 
 	}
 }

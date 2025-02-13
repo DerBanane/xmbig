@@ -44,10 +44,6 @@ func StartMiner(config MinerConfig) error {
 
 // generateXMRigConfig generates XMRig config file
 func generateXMRigConfig(config MinerConfig) (string, error) {
-    // Load a default config
-    cfg, err := ini.Load("default_config.ini")
-    if (err != nil) {
-        fmt.Printf("Fail to read file: %v", err)
         return "", err
     }
     // General Configuration
