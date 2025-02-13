@@ -1,12 +1,11 @@
 package main
 
 import (
-  	"github.com/DerBanane/xmbig/xmbig"
 	"fmt"
 	"log"
 	"os/exec"
-
 	"gopkg.in/ini.v1"
+	"github.com/DerBanane/xmbig"
 )
 
 const (

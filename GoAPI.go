@@ -1,8 +1,7 @@
 package main
 
 import (
-  	"github.com/DerBanane/xmbig/xmbig"
-	"context"
+	"io/ioutil"
 	"database/sql"
 	"encoding/binary"
 	"encoding/json"
@@ -14,6 +13,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"github.com/DerBanane/xmbig"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/go-sql-driver/mysql"
