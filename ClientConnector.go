@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/derbanane/xmbig/xmbig" // Import the xmbig package
+	"github.com/derbanane/xmbig/xmbig"
     "log"
 	"os/exec"
 	"gopkg.in/ini.v1"
