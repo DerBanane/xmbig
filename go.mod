@@ -3,7 +3,6 @@ module github.com/derbanane/xmbig
 go 1.21.0
 
 require (
-	github.com/derbanane/xmbig v0.0.0-20211019134900-3b3b3b3b3b3b
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/joho/godotenv v1.5.1
@@ -14,6 +13,8 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/derbanane/xmbig v0.0.0
+	github.com/derbanane/xmbig/api v0.0.0
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
