@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package xmbig;
 
-option go_package = "github.com/derbanane/xmbig/go";
+option go_package = "github.com/derbanane/xmbig/xmrig";
 
 message MinerStatus {
   string client_id = 1;
