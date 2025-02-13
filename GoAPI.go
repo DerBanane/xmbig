@@ -10,13 +10,15 @@ import (
 	"net/http"
 	"os"
 	"sync"
-
+	"github.com/derbanane/xmbig"
+	"io"
+	"encoding/binary"
+	"strings"
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
-	"xmbig/xmbig"
 )
 
 // Globale Variablen
