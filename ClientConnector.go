@@ -1,4 +1,4 @@
-package main
+package xmbig
 
 import (
 	"fmt"

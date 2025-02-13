@@ -1,4 +1,4 @@
-module github.com/DerBanane/xmbig
+module github.com/derbanane/xmbig
 
 go 1.23.6
 
