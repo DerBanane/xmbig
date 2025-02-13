@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"github.com/DerBanane/xmbig"
+	"github.com/derbanane/xmbig/xmbig"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/go-sql-driver/mysql"

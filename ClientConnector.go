@@ -5,7 +5,6 @@ import (
 	"log"
 	"os/exec"
 	"gopkg.in/ini.v1"
-	"github.com/DerBanane/xmbig"
 )
 
 const (
@@ -16,7 +15,7 @@ const (
 
 func StartMiner(config MinerConfig) error {
 	// Generate XMRig config file
-	configFile, err := generateXMRigConfig(config)
+	configFile, err := createXMRigConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to generate xmrig Config: %w", err)
 	}
@@ -40,7 +39,7 @@ func StartMiner(config MinerConfig) error {
 }
 
 // generateXMRigConfig generates XMRig config file
-func generateXMRigConfig(config MinerConfig) (string, error) {
+func createXMRigConfig(config MinerConfig) (string, error) {
 	// Load a default config
 	cfg, err := ini.Load("default_config.ini")
 	if err != nil {
