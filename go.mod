@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/ini.v1 v1.67.0
+	github.com/lib/pq v1.10.9
 )
 
 require (

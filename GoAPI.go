@@ -19,6 +19,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
+	_ "github.com/lib/pq"
 )
 
 // Globale Variablen
@@ -298,7 +299,7 @@ func tcpServerConnector() {
 
 	for {
 		conn, err := listener.Accept()
-		if err != nil {
+		if (err != nil) {
 			log.Println("Error accepting:", err)
 			continue
 		}
