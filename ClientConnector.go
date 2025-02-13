@@ -7,7 +7,7 @@ import (
 	"strings"
     "context"
 	"time"
-	"github.com/derBanane/xmbig"
+	"github.com/derBanane/xmbig/xmbig"
 	"google.golang.org/protobuf/proto"
 )
 

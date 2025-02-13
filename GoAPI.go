@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/DerBanane/xmbig" // Korrekter Importpfad
+	"github.com/DerBanane/xmbig/xmbig" // Korrekter Importpfad
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
