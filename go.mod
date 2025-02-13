@@ -3,7 +3,6 @@ module github.com/DerBanane/xmbig
 go 1.21.6
 
 require (
-	github.com/derBanane/xmbig v0.0.0-20250213092953-893dc675c2e6
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9

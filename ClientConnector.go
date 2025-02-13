@@ -1,4 +1,4 @@
-package xmbig
+package main
 
 import (
 	"fmt"
@@ -15,7 +15,6 @@ import (
 	_ "github.com/lib/pq"
 	"sync"
 	"time"
-	"github.com/DerBanane/xmbig"
 	"google.golang.org/protobuf/proto"
 	"encoding/binary"
 	"io"

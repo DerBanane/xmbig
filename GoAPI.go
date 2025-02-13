@@ -1,4 +1,4 @@
-package xmbig
+package main
 
 import (
 	"database/sql"
@@ -13,8 +13,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-
-	"github.com/DerBanane/xmbig" // Korrekter Importpfad
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
