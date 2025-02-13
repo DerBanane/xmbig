@@ -7,7 +7,7 @@ import (
 	"log"
 	"net"
 	"time"
-	"github.com/derbanane/xmbig"
+	"github.com/DerBanane/xmbig"
 	"google.golang.org/protobuf/proto"
 )
 
