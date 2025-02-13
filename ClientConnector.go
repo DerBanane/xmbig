@@ -1,6 +1,7 @@
 package main
 
 import (
+  	"github.com/DerBanane/xmbig/xmbig"
 	"fmt"
 	"log"
 	"os/exec"

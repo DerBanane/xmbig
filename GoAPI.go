@@ -1,6 +1,7 @@
 package main
 
 import (
+  	"github.com/DerBanane/xmbig/xmbig"
 	"context"
 	"database/sql"
 	"encoding/binary"
@@ -13,12 +14,9 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
-
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/derbanane/xmbig/xmbig" // Korrekter Importpfad
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
 )
