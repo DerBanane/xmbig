@@ -1,14 +1,25 @@
-package main
+package xmbig
 
 import (
 	"fmt"
 	"log"
 	"os/exec"
+	"gopkg.in/ini.v1"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"net"
+	"net/http"
+	"os"
 	"strings"
-    "context"
+	"database/sql"
+	_ "github.com/lib/pq"
+	"sync"
 	"time"
-	"github.com/derBanane/xmbig/xmbig"
+	"github.com/DerBanane/xmbig"
 	"google.golang.org/protobuf/proto"
+	"encoding/binary"
+	"io"
+	"io/ioutil"
 )
 
 const (
@@ -42,11 +53,9 @@ func StartMiner(config MinerConfig) error {
 	return nil
 }
 
-// generateXMRigConfig generates XMRig config file
 func generateXMRigConfig(config MinerConfig) (string, error) {
         return "", err
     }
-    // General Configuration
     cfg.Section("").Key("url").SetValue(config.PoolAddress)
     cfg.Section("").Key("user").SetValue(config.Username)
     cfg.Section("").Key("pass").SetValue(config.Password)
