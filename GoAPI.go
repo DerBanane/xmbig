@@ -1,7 +1,9 @@
 package main
 
 import (
-	"database/sql"
+    "fmt"
+    "github.com/derbanane/xmbig/xmbig" // Import the xmbig package
+    "database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"github.com/derbanane/xmbig"
 	"io"
 	"encoding/binary"
 	"strings"
