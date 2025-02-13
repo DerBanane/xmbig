@@ -5,6 +5,7 @@ import (
 	"log"
 	"os/exec"
 	"gopkg.in/ini.v1"
+	"github.com/derbanane/xmbig/xmbig"
 )
 
 const (
