@@ -7,45 +7,45 @@ import (
 	"log"
 	"net"
 	"time"
-
+	"github.com/derbanane/xmbig"
 	"google.golang.org/protobuf/proto"
 )
 
 type ClientConnector struct {
-    ServerAddress string
-	conn net.Conn
+	ServerAddress string
+	conn          net.Conn
 }
 
 func (cc *ClientConnector) SendCommand(minerID string, command *xmbig.ControlCommand) error {
-		// Get Connection for this miner Id
+	// Get Connection for this miner Id
 	connRaw, ok := minerConns.Load(minerID)
 	if !ok {
 		return fmt.Errorf("unable to find miner with this MinerId")
 	}
 	conn, _ := connRaw.(net.Conn)
 
-    // Serialize the message
-    data, err := proto.Marshal(command)
-    if err != nil {
-        return fmt.Errorf("failed to marshal ControlCommand: %w", err)
-    }
+	// Serialize the message
+	data, err := proto.Marshal(command)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ControlCommand: %w", err)
+	}
 
-    // Prepend the message with its length
-    length := uint32(len(data))
-    err = binary.Write(conn, binary.BigEndian, length)
-    if err != nil {
-        return fmt.Errorf("failed to write message length: %w", err)
-    }
+	// Prepend the message with its length
+	length := uint32(len(data))
+	err = binary.Write(conn, binary.BigEndian, length)
+	if err != nil {
+		return fmt.Errorf("failed to write message length: %w", err)
+	}
 
-    // Send the message
-    _, err = conn.Write(data)
-    if err != nil {
-        return fmt.Errorf("failed to send message: %w", err)
-    }
+	// Send the message
+	_, err = conn.Write(data)
+	if err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
 
-    fmt.Printf("Successfully send command to miner %s", minerID)
+	fmt.Printf("Successfully send command to miner %s", minerID)
 
-    return nil
+	return nil
 }
 
 func (cc *ClientConnector) SendMinerStats(ctx context.Context) {

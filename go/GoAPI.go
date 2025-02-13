@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"X:CODER/xmbig/xmbig" // Importiere das generierte Protobuf-Paket
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,7 +12,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
-
+	"github.com/derbanane/xmbig"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
