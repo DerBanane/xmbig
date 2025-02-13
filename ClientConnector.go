@@ -4,21 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+
 	"gopkg.in/ini.v1"
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
-	"net"
-	"net/http"
-	"os"
-	"strings"
-	"database/sql"
-	_ "github.com/lib/pq"
-	"sync"
-	"time"
-	"google.golang.org/protobuf/proto"
-	"encoding/binary"
-	"io"
-	"io/ioutil"
 )
 
 const (
@@ -28,7 +15,7 @@ const (
 // Helper function to send a MinerStatus message
 
 func StartMiner(config MinerConfig) error {
-   	// Generate XMRig config file
+	// Generate XMRig config file
 	configFile, err := generateXMRigConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to generate xmrig Config: %w", err)
@@ -52,19 +39,25 @@ func StartMiner(config MinerConfig) error {
 	return nil
 }
 
+// generateXMRigConfig generates XMRig config file
 func generateXMRigConfig(config MinerConfig) (string, error) {
-        return "", err
-    }
-    cfg.Section("").Key("url").SetValue(config.PoolAddress)
-    cfg.Section("").Key("user").SetValue(config.Username)
-    cfg.Section("").Key("pass").SetValue(config.Password)
-    cfg.Section("").Key("algo").SetValue(config.Algorithm)
+	// Load a default config
+	cfg, err := ini.Load("default_config.ini")
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		return "", err
+	}
+	// General Configuration
+	cfg.Section("").Key("url").SetValue(config.PoolAddress)
+	cfg.Section("").Key("user").SetValue(config.Username)
+	cfg.Section("").Key("pass").SetValue(config.Password)
+	cfg.Section("").Key("algo").SetValue(config.Algorithm)
 
-    // Store the configuration in the file
-    err = cfg.SaveTo("config.ini")
-    if err != nil {
-        fmt.Printf("Fail to create file: %v", err)
-        return "", err
-    }
-    return "config.ini", nil
+	// Store the configuration in the file
+	err = cfg.SaveTo("config.ini")
+	if err != nil {
+		fmt.Printf("Fail to create file: %v", err)
+		return "", err
+	}
+	return "config.ini", nil
 }

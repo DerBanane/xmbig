@@ -1,24 +1,34 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
-	"github.com/DerBanane/xmbig"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/derbanane/xmbig/xmbig" // Korrekter Importpfad
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
+)
+
+// Globale Variablen
+var (
+	db          *sql.DB
+	config      Config
+	minerConns  sync.Map // Verwaltet die TCP-Verbindungen zu den Minern
+	tcpListener net.Listener
 )
 
 // MinerConfig represents the configuration for a miner
@@ -46,14 +56,6 @@ type DatabaseConfig struct {
 type Config struct {
 	Database DatabaseConfig `ini:"database"`
 }
-
-// globals
-var (
-	db          *sql.DB
-	config      Config
-	minerConns  sync.Map // Verwaltet die TCP-Verbindungen zu den Minern
-	tcpListener net.Listener
-)
 
 func main() {
 	// Load .env file
@@ -236,7 +238,7 @@ func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
 func generateXMRigConfig(config MinerConfig) (string, error) {
 	// Load a default config
 	cfg, err := ini.Load("default_config.ini")
-	if err != nil {
+	if (err != nil) {
 		fmt.Printf("Fail to read file: %v", err)
 		return "", err
 	}
@@ -286,7 +288,7 @@ func connectToDatabase(dbConfig DatabaseConfig) (*sql.DB, error) {
 	return db, nil
 }
 
-// TCP Code
+//TCP Code
 func tcpServerConnector() {
 	listener, err := net.Listen("tcp", ":9000")
 	if err != nil {
