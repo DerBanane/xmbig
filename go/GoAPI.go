@@ -13,7 +13,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/derbanane/xmbig"
+	"github.com/DerBanane/xmbig"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
