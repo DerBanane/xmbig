@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package xmbig;
 
-option go_package = "github.com/DerBanane/xmbig";  // KEIN /xmbig am Ende!
+option go_package = "github.com/DerBanane/xmbig";
 
 message MinerStatus {
   string client_id = 1;
