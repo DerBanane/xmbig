@@ -1,26 +1,22 @@
-package xmbig
+package main
 
 import (
-	"io/ioutil"
 	"database/sql"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
-	"github.com/derbanane/xmbig"
-	"github.com/derbanane/xmbig/xmbig"
+
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
-	_ "github.com/lib/pq"
+	"xmbig/xmbig"
 )
 
 // Globale Variablen
@@ -123,7 +119,7 @@ func setMinerConfig(c *gin.Context, dbConfig DatabaseConfig, minerConns *sync.Ma
 		return
 	}
 
-	// Store config in database (PostgreSQL)
+	// Store config in database (MySQL)
 	err := storeMinerConfig(config, dbConfig)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store config in database: " + err.Error()})
@@ -141,71 +137,71 @@ func setMinerConfig(c *gin.Context, dbConfig DatabaseConfig, minerConns *sync.Ma
 }
 
 func sendMinerCommand(c *gin.Context) {
-	var command struct {
-		MinerID string `json:"minerID"`
-		Command string `json:"command"`
-		Payload string `json:"payload"`
-	}
+    var command struct {
+        MinerID string `json:"minerID"`
+        Command string `json:"command"`
+        Payload string `json:"payload"`
+    }
 
-	if err := c.BindJSON(&command); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+    if err := c.BindJSON(&command); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	// Get Connection for this miner Id
-	connRaw, ok := minerConns.Load(command.MinerID)
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unable to find miner with this MinerId"})
-		return
-	}
-	conn, _ := connRaw.(net.Conn)
+    // Get Connection for this miner Id
+    connRaw, ok := minerConns.Load(command.MinerID)
+    if !ok {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "unable to find miner with this MinerId"})
+        return
+    }
+    conn, _ := connRaw.(net.Conn)
 
-	// Create ControlCommand Protobuf Message
-	controlCommand := &xmbig.ControlCommand{
-		Command: command.Command,
-		Payload: command.Payload,
-	}
+    // Create ControlCommand Protobuf Message
+    controlCommand := &xmbig.ControlCommand{
+        Command: command.Command,
+        Payload: command.Payload,
+    }
 
-	err := sendCommand(conn, controlCommand)
+    err := sendCommand(conn, controlCommand)
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send command via TCP: " + err.Error()})
-		return
-	}
+    if err != nil{
+         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send command via TCP: " + err.Error()})
+         return
+    }
 
-	c.JSON(http.StatusOK, gin.H{"message": "Command send successfully"})
+    c.JSON(http.StatusOK, gin.H{"message": "Command send successfully"})
 }
 
 func getClientLog(c *gin.Context) {
-	clientId := c.Query("clientId")
+    clientId := c.Query("clientId")
 
-	if clientId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ClientId is required"})
-		return
-	}
+    if clientId == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "ClientId is required"})
+        return
+    }
 
-	logContent, err := getMinerLogContent(clientId)
+    logContent, err := getMinerLogContent(clientId)
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch the logfile"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"client_log": logContent})
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch the logfile"})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"client_log": logContent})
 
 }
 
 func getMinerLogContent(clientId string) (string, error) {
-	path := "logs/" + clientId + ".log"
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(content), nil
+    path := "logs/" + clientId + ".log"
+    content, err := ioutil.ReadFile(path)
+    if err != nil {
+        return "", err
+    }
+    return string(content), nil
 }
 
 func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.Name)
-	db, err := sql.Open("postgres", connStr)
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
+	db, err := sql.Open("mysql", connStr)
 	if err != nil {
 		return err
 	}
@@ -214,24 +210,56 @@ func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
 	_, err = db.Exec(`
         CREATE TABLE IF NOT EXISTS miner_configs (
             miner_id VARCHAR(255) PRIMARY KEY,
-            config JSONB
+            poolAddress VARCHAR(255) NOT NULL,
+            username VARCHAR(255) NOT NULL,
+            password VARCHAR(255),
+            algorithm VARCHAR(255),
+            autoSwitch BOOLEAN,
+            torEnabled BOOLEAN,
+            extraParams VARCHAR(255)
         )
     `)
 	if err != nil {
 		return err
 	}
 
-	configJSON, err := json.Marshal(config)
+	// Prepare the insert statement
+	stmt, err := db.Prepare(`
+        INSERT INTO miner_configs (miner_id, poolAddress, username, password, algorithm, autoSwitch, torEnabled, extraParams)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            poolAddress = ?, 
+            username = ?, 
+            password = ?, 
+            algorithm = ?, 
+            autoSwitch = ?, 
+            torEnabled = ?, 
+            extraParams = ?
+    `)
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
-	_, err = db.Exec(`
-        INSERT INTO miner_configs (miner_id, config)
-        VALUES ($1, $2)
-        ON CONFLICT (miner_id) DO UPDATE
-        SET config = $2
-    `, config.MinerID, configJSON)
+	// Execute the insert statement
+	_, err = stmt.Exec(
+		config.MinerID,
+		config.PoolAddress,
+		config.Username,
+		config.Password,
+		config.Algorithm,
+		config.AutoSwitch,
+		config.TorEnabled,
+		config.ExtraParams,
+		config.PoolAddress,
+		config.Username,
+		config.Password,
+		config.Algorithm,
+		config.AutoSwitch,
+		config.TorEnabled,
+		config.ExtraParams,
+	)
+
 	return err
 }
 
@@ -259,23 +287,23 @@ func generateXMRigConfig(config MinerConfig) (string, error) {
 
 // loadConfig reads configuration from file
 func loadConfig(file string, cfg *Config) error {
-	iniCfg, err := ini.Load(file)
-	if err != nil {
-		return err
-	}
+    iniCfg, err := ini.Load(file)
+    if err != nil {
+        return err
+    }
 
-	err = iniCfg.MapTo(cfg)
-	if err != nil {
-		return err
-	}
+    err = iniCfg.MapTo(cfg)
+    if err != nil {
+        return err
+    }
 
-	return nil
+    return nil
 }
 
 // connectToDatabase establishes a connection to the database
 func connectToDatabase(dbConfig DatabaseConfig) (*sql.DB, error) {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.Name)
-	db, err := sql.Open("postgres", connStr)
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
+	db, err := sql.Open("mysql", connStr)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +328,7 @@ func tcpServerConnector() {
 
 	for {
 		conn, err := listener.Accept()
-		if (err != nil) {
+		if err != nil {
 			log.Println("Error accepting:", err)
 			continue
 		}
@@ -335,6 +363,7 @@ func handleConnection(conn net.Conn, minerConns *sync.Map) {
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client disconnected")
+                //TODO muss auch aus der map entfernt werden
 				return
 			}
 			fmt.Println("Error reading message length:", err)
