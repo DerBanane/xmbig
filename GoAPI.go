@@ -70,24 +70,20 @@ func main() {
 		return
 	}
 
-	// Connect to the database
 	db, err = connectToDatabase(cfg.Database)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-		return
-	}
-	defer db.Close()
-	println("Connected to the Database")
+ 	 if err != nil {
+     	log.Fatalf("Failed to connect to database: %v", err)
+     	return
+ 	 }
+ 	 defer db.Close()
+ 	 println("Connected to the Database")
 
-	// Initialisiere die TCP Verbindung
 	go tcpServerConnector()
 
-	// Set Gin to release mode in production
 	gin.SetMode(gin.ReleaseMode)
 
 	router := gin.Default()
 
-	// Add CORS middleware
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
