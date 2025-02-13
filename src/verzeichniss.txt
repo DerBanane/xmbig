@@ -1,0 +1,31 @@
+modern-dashboard/
+├── node_modules/                 # Enthält alle installierten npm-Pakete
+├── public/
+│   ├── favicon.ico             # Favicon der Anwendung
+│   └── index.html              # Haupt-HTML-Datei
+├── src/
+│   ├── assets/                  # Bilder, Styles und andere Assets
+│   │   └── logo.png
+│   ├── components/            # Vue.js-Komponenten
+│   │   ├── ClientStatusTable.vue   # DataTable-Komponente
+│   │   ├── ClientStatusRow.vue     # Einzelne Zeile in der DataTable
+│   │   ├── DashboardCharts.vue    # Komponenten für die Charts
+│   │   ├── SettingsPanel.vue     # Komponenten für die Einstellungen
+│   │   ├── StatusBar.vue       # Komponenten für die Statusleiste
+│   │   ├── MinerEditorModal.vue  # Modal für den Miner-Editor
+│   │   ├── MinerLogModal.vue     # Modal für das Miner-Log
+│   │   └── ...                    # Weitere Komponenten
+│   ├── router/                  # Vue Router-Konfiguration (falls verwendet)
+│   │   └── index.js
+│   ├── store/                   # Vuex Store-Konfiguration (falls verwendet)
+│   │   └── index.js
+│   ├── utils/
+│   │   └── clientStatusFormatters.js # Hilfsfunktionen
+│   ├── App.vue                  # Hauptkomponente der Anwendung
+│   └── main.js                  # Einstiegspunkt der Anwendung
+├── .eslintrc.js                # ESLint-Konfiguration
+├── .gitignore                  # Dateien, die von Git ignoriert werden sollen
+├── babel.config.js              # Babel-Konfiguration
+├── package.json                 # Projektinformationen und Abhängigkeiten
+├── package-lock.json            # Genaue Versionsinformationen der Abhängigkeiten
+└── README.md                    # Projektbeschreibung
