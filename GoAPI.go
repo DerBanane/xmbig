@@ -16,7 +16,7 @@ import (
 	"sync"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
 )
