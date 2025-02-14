@@ -1,4 +1,4 @@
-modern-dashboard/
+xmbig/
 ├── node_modules/                 # Enthält alle installierten npm-Pakete
 ├── public/
 │   ├── favicon.ico             # Favicon der Anwendung
