@@ -21,6 +21,12 @@ type MinerConfig struct {
 	Algorithm   string
 }
 
+func mainClient() {
+	serverAddress := "localhost:3306"
+	minerId := "miner123"
+	RunClient(serverAddress, minerId)
+}
+
 func StartMiner(config MinerConfig) error {
 	configFile, err := createXMRigConfigFile(config)
 	if err != nil {
