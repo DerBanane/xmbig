@@ -74,9 +74,8 @@ func generateXMRigConfigFile(config MinerConfig) (string, error) {
 	return "config.ini", nil
 }
 
-//TCP Code
 func RunClient(serverAddress string, minerId string) {
-	//Dial TCP
+	
 	conn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
 		log.Fatalf("Failed to connect to server: %v", err)

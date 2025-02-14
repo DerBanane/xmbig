@@ -89,7 +89,7 @@ func main() {
 	})
 	router.POST("/api/miner/command", sendMinerCommand)
 	router.GET("/api/client/log", getClientLog)
-	
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -311,13 +311,13 @@ func connectToDatabase(dbConfig DatabaseConfig) (*sql.DB, error) {
 
 //TCP Code
 func tcpServerConnector() {
-	listener, err := net.Listen("tcp", ":9000")
+	listener, err := net.Listen("tcp", ":3306")
 	if err != nil {
 		log.Fatal("Error listening:", err)
 	}
 	defer listener.Close()
 
-	fmt.Println("Listening on :9000")
+	fmt.Println("Listening on :3306")
 
 	for {
 		conn, err := listener.Accept()
