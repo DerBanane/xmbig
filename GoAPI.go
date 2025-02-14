@@ -98,17 +98,6 @@ func main() {
 	router.Run(":" + port)
 }
 
-type MinerConfig struct {
-	MinerID     string `json:"minerID"`
-	PoolAddress string `json:"poolAddress"`
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	Algorithm   string `json:"algorithm"`
-	AutoSwitch  bool   `json:"autoSwitch"`
-	TorEnabled  bool   `json:"torEnabled"`
-	ExtraParams string `json:"extraParams"`
-}
-
 func setMinerConfig(c *gin.Context, dbConfig DatabaseConfig, minerConns *sync.Map) {
 	var config MinerConfig
 	if err := c.BindJSON(&config); err != nil {

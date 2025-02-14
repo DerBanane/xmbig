@@ -14,8 +14,14 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+type MinerConfig struct {
+	PoolAddress string
+	Username    string
+	Password    string
+	Algorithm   string
+}
+
 func StartMiner(config MinerConfig) error {
-	// Generate XMRig config file
 	configFile, err := createXMRigConfigFile(config)
 	if err != nil {
 		return fmt.Errorf("failed to generate xmrig Config: %w", err)
