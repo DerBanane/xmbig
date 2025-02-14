@@ -7,22 +7,18 @@ import (
 	"net"
 	"os/exec"
 	"strings"
-    "context"
 	"time"
+
 	"github.com/derbanane/xmbig/xmbig"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
 )
 
-const (
-	serverAddress = "localhost:9000"
-)
-
 // Helper function to send a MinerStatus message
 
 func StartMiner(config MinerConfig) error {
-   	// Generate XMRig config file
-	configFile, err := generateXMRigConfig(config)
+	// Generate XMRig config file
+	configFile, err := generateXMRigConfigFile(config)
 	if err != nil {
 		return fmt.Errorf("failed to generate xmrig Config: %w", err)
 	}
@@ -45,32 +41,42 @@ func StartMiner(config MinerConfig) error {
 	return nil
 }
 
-// generateXMRigConfig generates XMRig config file
-func generateXMRigConfig(config MinerConfig) (string, error) {
-    // Load a default config
-    cfg, err := ini.Load("default_config.ini")
-    if (err != nil) {
-        fmt.Printf("Fail to read file: %v", err)
-        return "", err
-    }
-    // General Configuration
-    cfg.Section("").Key("url").SetValue(config.PoolAddress)
-    cfg.Section("").Key("user").SetValue(config.Username)
-    cfg.Section("").Key("pass").SetValue(config.Password)
-    cfg.Section("").Key("algo").SetValue(config.Algorithm)
+type MinerConfig struct {
+	MinerID     string `json:"minerID"`
+	PoolAddress string `json:"poolAddress"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	Algorithm   string `json:"algorithm"`
+	AutoSwitch  bool   `json:"autoSwitch"`
+	TorEnabled  bool   `json:"torEnabled"`
+	ExtraParams string `json:"extraParams"`
+}
 
-    // Store the configuration in the file
-    err = cfg.SaveTo("config.ini")
-    if err != nil {
-        fmt.Printf("Fail to create file: %v", err)
-        return "", err
-    }
-    return "config.ini", nil
+func generateXMRigConfigFile(config MinerConfig) (string, error) {
+	// Load a default config
+	cfg, err := ini.Load("default_config.ini")
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		return "", err
+	}
+	// General Configuration
+	cfg.Section("pool").Key("url").SetValue(config.PoolAddress)
+	cfg.Section("pool").Key("user").SetValue(config.Username)
+	cfg.Section("pool").Key("pass").SetValue(config.Password)
+	cfg.Section("pool").Key("algo").SetValue(config.Algorithm)
+
+	// Store the configuration in the file
+	err = cfg.SaveTo("config.ini")
+	if err != nil {
+		fmt.Printf("Fail to create file: %v", err)
+		return "", err
+	}
+	return "config.ini", nil
 }
 
 //TCP Code
 func RunClient(serverAddress string, minerId string) {
-    //Dial TCP
+	//Dial TCP
 	conn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
 		log.Fatalf("Failed to connect to server: %v", err)
@@ -79,13 +85,12 @@ func RunClient(serverAddress string, minerId string) {
 
 	log.Printf("Connected to server %s", serverAddress)
 
-
 	// 1. Sende die Miner-ID
 	_, err = conn.Write([]byte(minerId))
 	if err != nil {
 		log.Fatalf("Failed to send miner ID: %v", err)
 	}
-		// Run the function
+	// Run the function
 	go readMessages(conn)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -106,21 +111,16 @@ func RunClient(serverAddress string, minerId string) {
 			log.Printf("Failed to marshal MinerStatus: %v", err)
 			continue // Skip this iteration
 		}
-
-		// Sende die Nachricht mit der Länge
 		err = sendProtobufMessage(conn, data)
 		if err != nil {
 			log.Printf("Failed to send message: %v", err)
-			continue // Skip this iteration
+			continue
 		}
-
 		log.Println("MinerStatus sent successfully")
-
-		// Hier kannst du die Miner-Statusdaten an den Server senden
+	
 	}
 }
 
-// Helper function to send a Protobuf message with length
 func sendProtobufMessage(conn net.Conn, data []byte) error {
 	length := uint32(len(data))
 	err := binary.Write(conn, binary.BigEndian, length)
@@ -148,7 +148,6 @@ func readMessages(conn net.Conn) {
 			return
 		}
 
-		// 2. Nachricht lesen
 		buffer := make([]byte, length)
 		n, err := conn.Read(buffer)
 		if err != nil {
@@ -161,11 +160,10 @@ func readMessages(conn net.Conn) {
 			return
 		}
 
-		// 3. Nachricht deserialisieren
 		var cmd xmbig.ControlCommand
 		err = proto.Unmarshal(buffer, &cmd)
 		if err != nil {
-			fmt.Println("Error during unmarshal" , err)
+			fmt.Println("Error during unmarshal", err)
 			return
 		}
 

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,37 +10,24 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
-	"github.com/derbanane/xmbig/xmbig" // Korrekter Importpfad
+	"github.com/derbanane/xmbig/xmbig"
 )
 
 // Globale Variablen
 var (
 	db          *sql.DB
 	config      Config
-	minerConns  sync.Map // Verwaltet die TCP-Verbindungen zu den Minern
+	minerConns  sync.Map
 	tcpListener net.Listener
 )
-
-// MinerConfig represents the configuration for a miner
-type MinerConfig struct {
-	MinerID     string `json:"minerID"`
-	PoolAddress string `json:"poolAddress"`
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	Algorithm   string `json:"algorithm"`
-	AutoSwitch  bool   `json:"autoSwitch"`
-	TorEnabled  bool   `json:"torEnabled"`
-	ExtraParams string `json:"extraParams"`
-}
 
 // DatabaseConfig represents the database configuration
 type DatabaseConfig struct {
@@ -58,46 +43,6 @@ type Config struct {
 	Database DatabaseConfig `ini:"database"`
 }
 
-// globals
-var (
-	//Globals
-	clientConnector ClientConnector
-)
-type ClientConnector struct {
-    ServerAddress string
-}
-
-func (cc *ClientConnector) SendCommand(minerID string, command *xmbig.ControlCommand) error {
-		// Get Connection for this miner Id
-	connRaw, ok := minerConns.Load(minerID)
-	if !ok {
-		return fmt.Errorf("unable to find miner with this MinerId")
-	}
-	conn, _ := connRaw.(net.Conn)
-
-    // Serialize the message
-    data, err := proto.Marshal(command)
-    if err != nil {
-        return fmt.Errorf("failed to marshal ControlCommand: %w", err)
-    }
-
-    // Prepend the message with its length
-    length := uint32(len(data))
-    err = binary.Write(conn, binary.BigEndian, length)
-    if err != nil {
-        return fmt.Errorf("failed to write message length: %w", err)
-    }
-
-    // Send the message
-    _, err = conn.Write(data)
-    if err != nil {
-        return fmt.Errorf("failed to send message: %w", err)
-    }
-
-    fmt.Printf("Successfully send command to miner %s", minerID)
-
-    return nil
-}
 func main() {
 	// Load .env file
 	err := godotenv.Load()
@@ -121,9 +66,6 @@ func main() {
 	}
 	defer db.Close()
 	println("Connected to the Database")
-
-	   // Initialisiere die TCP Verbindung
-	go tcpServerConnector()
 
 	// Set Gin to release mode in production
 	gin.SetMode(gin.ReleaseMode)
@@ -157,6 +99,17 @@ func main() {
 	router.Run(":" + port)
 }
 
+type MinerConfig struct {
+	MinerID     string `json:"minerID"`
+	PoolAddress string `json:"poolAddress"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	Algorithm   string `json:"algorithm"`
+	AutoSwitch  bool   `json:"autoSwitch"`
+	TorEnabled  bool   `json:"torEnabled"`
+	ExtraParams string `json:"extraParams"`
+}
+
 func setMinerConfig(c *gin.Context, dbConfig DatabaseConfig, minerConns *sync.Map) {
 	var config MinerConfig
 	if err := c.BindJSON(&config); err != nil {
@@ -172,7 +125,7 @@ func setMinerConfig(c *gin.Context, dbConfig DatabaseConfig, minerConns *sync.Ma
 	}
 
 	// Generate XMRig config file
-	configFile, err := generateXMRigConfig(config)
+	configFile, err := generateXMRigConfigFile(config)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -245,81 +198,75 @@ func getMinerLogContent(clientId string) (string, error) {
 }
 
 func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
-    connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
-    db, err := sql.Open("mysql", connStr)
-    if err != nil {
-        return err
-    }
-    defer db.Close()
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.Name)
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
 
-    _, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS miner_configs (
-            miner_id VARCHAR(255) PRIMARY KEY,
-            poolAddress VARCHAR(255) NOT NULL,
-            username VARCHAR(255) NOT NULL,
-            password VARCHAR(255),
-            algorithm VARCHAR(255),
-            autoSwitch BOOLEAN,
-            torEnabled BOOLEAN,
-            extraParams VARCHAR(255)
-        )
-    `)
-    if err != nil {
-        return err
-    }
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS miner_configs (
+			miner_id VARCHAR(255) PRIMARY KEY,
+			pool_address VARCHAR(255) NOT NULL,
+			username VARCHAR(255) NOT NULL,
+			password VARCHAR(255),
+			algorithm VARCHAR(255),
+			auto_switch BOOLEAN,
+			tor_enabled BOOLEAN,
+			extra_params VARCHAR(255)
+		)
+	`)
+	if err != nil {
+		return err
+	}
 
-    // Prepare the insert statement
-    stmt, err := db.Prepare(`
-        INSERT INTO miner_configs (miner_id, poolAddress, username, password, algorithm, autoSwitch, torEnabled, extraParams)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-            poolAddress = ?, 
-            username = ?, 
-            password = ?, 
-            algorithm = ?, 
-            autoSwitch = ?, 
-            torEnabled = ?, 
-            extraParams = ?
-    `)
-    if err != nil {
-        return err
-    }
-    defer stmt.Close()
+	// Prepare the insert statement
+	stmt, err := db.Prepare(`
+		INSERT INTO miner_configs (miner_id, pool_address, username, password, algorithm, auto_switch, tor_enabled, extra_params)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (miner_id) DO UPDATE SET
+			pool_address = $2,
+			username = $3,
+			password = $4,
+			algorithm = $5,
+			auto_switch = $6,
+			tor_enabled = $7,
+			extra_params = $8
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
 
-    // Execute the insert statement
-    _, err = stmt.Exec(
-        config.MinerID,
-        config.PoolAddress,
-        config.Username,
-        config.Password,
-        config.Algorithm,
-        config.AutoSwitch,
-        config.TorEnabled,
-        config.ExtraParams,
-        config.PoolAddress,
-        config.Username,
-        config.Password,
-        config.Algorithm,
-        config.AutoSwitch,
-        config.TorEnabled,
-        config.ExtraParams,
-    )
+	// Execute the insert statement
+	_, err = stmt.Exec(
+		config.MinerID,
+		config.PoolAddress,
+		config.Username,
+		config.Password,
+		config.Algorithm,
+		config.AutoSwitch,
+		config.TorEnabled,
+		config.ExtraParams,
+	)
 
-    return err
+	return err
 }
 
-func generateXMRigConfig(config MinerConfig) (string, error) {
+func generateXMRigConfigFile(config MinerConfig) (string, error) {
 	// Load a default config
 	cfg, err := ini.Load("default_config.ini")
-	if (err != nil) {
+	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		return "", err
 	}
 	// General Configuration
-	cfg.Section("").Key("url").SetValue(config.PoolAddress)
-	cfg.Section("").Key("user").SetValue(config.Username)
-	cfg.Section("").Key("pass").SetValue(config.Password)
-	cfg.Section("").Key("algo").SetValue(config.Algorithm)
+	cfg.Section("pool").Key("url").SetValue(config.PoolAddress)
+	cfg.Section("pool").Key("user").SetValue(config.Username)
+	cfg.Section("pool").Key("pass").SetValue(config.Password)
+	cfg.Section("pool").Key("algo").SetValue(config.Algorithm)
 
 	// Store the configuration in the file
 	err = cfg.SaveTo("config.ini")
@@ -347,8 +294,10 @@ func loadConfig(file string, cfg *Config) error {
 
 // connectToDatabase establishes a connection to the database
 func connectToDatabase(dbConfig DatabaseConfig) (*sql.DB, error) {
-	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
-	db, err := sql.Open("mysql", connStr)
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.Name)
+
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +322,7 @@ func tcpServerConnector() {
 
 	for {
 		conn, err := listener.Accept()
-		if err != nil {
+		if (err != nil) {
 			log.Println("Error accepting:", err)
 			continue
 		}
@@ -391,7 +340,7 @@ func tcpServerConnector() {
 		minerId = strings.TrimSpace(minerId) // Entferne Leerzeichen
 
 		minerConns.Store(minerId, conn)
-		go handleConnection(conn, minerConns)
+		go handleConnection(conn, &minerConns)
 
 	}
 }
@@ -402,7 +351,7 @@ func handleConnection(conn net.Conn, minerConns *sync.Map) {
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
 	for {
-		// 1. Lese die Länge der Nachricht (als uint32)
+		
 		var length uint32
 		err := binary.Read(conn, binary.BigEndian, &length)
 		if err != nil {
@@ -435,13 +384,13 @@ func handleConnection(conn net.Conn, minerConns *sync.Map) {
 			return
 		}
 
-		// 4. Verarbeite die Nachricht
-		fmt.Printf("Received MinerStatus: %+v from %s\n", minerStatus, conn.RemoteAddr())
-		// Hier kannst du die Miner-Statusdaten in deiner Datenbank speichern oder andere Aktionen ausführen
+		
+		fmt.Printf("Received MinerStatus from %s\n", conn.RemoteAddr())
+		fmt.Printf("Hashrate: %f\n", minerStatus.Hashrate)
 	}
 }
 
-// Hilfsfunktion zum Senden von Befehlen
+
 func sendCommand(conn net.Conn, cmd *xmbig.ControlCommand) error {
 	data, err := proto.Marshal(cmd)
 	if err != nil {
