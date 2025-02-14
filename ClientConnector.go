@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/derbanane/xmbig/xmbig"
@@ -14,11 +14,9 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-// Helper function to send a MinerStatus message
-
 func StartMiner(config MinerConfig) error {
 	// Generate XMRig config file
-	configFile, err := generateXMRigConfigFile(config)
+	configFile, err := createXMRigConfigFile(config)
 	if err != nil {
 		return fmt.Errorf("failed to generate xmrig Config: %w", err)
 	}
@@ -27,12 +25,8 @@ func StartMiner(config MinerConfig) error {
 	cmdStr := fmt.Sprintf("./xmrig --config=%s", configFile)
 
 	// Start XMRig
-	cmd := exec.Command("cmd", "/C", cmdStr) // Windows
-
-	//For the cmd, you will have to enter the command needed
-
+	cmd := exec.Command("cmd", "/C", cmdStr)
 	log.Printf("starting miner with command: %s", cmdStr)
-
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
@@ -41,18 +35,8 @@ func StartMiner(config MinerConfig) error {
 	return nil
 }
 
-type MinerConfig struct {
-	MinerID     string `json:"minerID"`
-	PoolAddress string `json:"poolAddress"`
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	Algorithm   string `json:"algorithm"`
-	AutoSwitch  bool   `json:"autoSwitch"`
-	TorEnabled  bool   `json:"torEnabled"`
-	ExtraParams string `json:"extraParams"`
-}
 
-func generateXMRigConfigFile(config MinerConfig) (string, error) {
+func createXMRigConfigFile(config MinerConfig) (string, error) {
 	// Load a default config
 	cfg, err := ini.Load("default_config.ini")
 	if err != nil {
