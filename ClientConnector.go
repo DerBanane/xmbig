@@ -21,7 +21,7 @@ type MinerConfig struct {
 	Algorithm   string
 }
 
-func mainClient() {
+func main() {
 	serverAddress := "localhost:3306"
 	minerId := "miner123"
 	RunClient(serverAddress, minerId)
