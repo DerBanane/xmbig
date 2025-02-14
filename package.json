@@ -9,7 +9,7 @@
     },
     "dependencies": {
         "@popperjs/core": "^2.11.8",
-        "@rmm5t/jquery-timeago": "rmm5t/jquery-timeago",
+        "@rmm5t/jquery-timeago": "github:rmm5t/jquery-timeago",
         "axios": "^1.6.5",
         "bootstrap": "^5.3.2",
         "chart.js": "^2.9.4",
@@ -56,5 +56,17 @@
         "> 1%",
         "last 2 versions",
         "not dead"
-    ]
+    ],
+    "main": ".",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/derbanane/xmbig.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/derbanane/xmbig/issues"
+    },
+    "homepage": "https://github.com/derbanane/xmbig#readme",
+    "description": ""
 }

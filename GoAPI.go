@@ -1,23 +1,27 @@
 package main
 
 import (
-    "github.com/derbanane/xmbig/xmbig" // Import the xmbig package
-    "database/sql"
+	"context"
+	"database/sql"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
-	"io"
-	"encoding/binary"
-	"strings"
-	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/ini.v1"
+	"github.com/derbanane/xmbig/xmbig" // Korrekter Importpfad
 )
 
 // Globale Variablen
@@ -54,6 +58,46 @@ type Config struct {
 	Database DatabaseConfig `ini:"database"`
 }
 
+// globals
+var (
+	//Globals
+	clientConnector ClientConnector
+)
+type ClientConnector struct {
+    ServerAddress string
+}
+
+func (cc *ClientConnector) SendCommand(minerID string, command *xmbig.ControlCommand) error {
+		// Get Connection for this miner Id
+	connRaw, ok := minerConns.Load(minerID)
+	if !ok {
+		return fmt.Errorf("unable to find miner with this MinerId")
+	}
+	conn, _ := connRaw.(net.Conn)
+
+    // Serialize the message
+    data, err := proto.Marshal(command)
+    if err != nil {
+        return fmt.Errorf("failed to marshal ControlCommand: %w", err)
+    }
+
+    // Prepend the message with its length
+    length := uint32(len(data))
+    err = binary.Write(conn, binary.BigEndian, length)
+    if err != nil {
+        return fmt.Errorf("failed to write message length: %w", err)
+    }
+
+    // Send the message
+    _, err = conn.Write(data)
+    if err != nil {
+        return fmt.Errorf("failed to send message: %w", err)
+    }
+
+    fmt.Printf("Successfully send command to miner %s", minerID)
+
+    return nil
+}
 func main() {
 	// Load .env file
 	err := godotenv.Load()
@@ -69,20 +113,24 @@ func main() {
 		return
 	}
 
+	// Connect to the database
 	db, err = connectToDatabase(cfg.Database)
- 	 if err != nil {
-     	log.Fatalf("Failed to connect to database: %v", err)
-     	return
- 	 }
- 	 defer db.Close()
- 	 println("Connected to the Database")
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+		return
+	}
+	defer db.Close()
+	println("Connected to the Database")
 
+	   // Initialisiere die TCP Verbindung
 	go tcpServerConnector()
 
+	// Set Gin to release mode in production
 	gin.SetMode(gin.ReleaseMode)
 
 	router := gin.Default()
 
+	// Add CORS middleware
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
@@ -116,7 +164,7 @@ func setMinerConfig(c *gin.Context, dbConfig DatabaseConfig, minerConns *sync.Ma
 		return
 	}
 
-	// Store config in database (MySQL)
+	// Store config in database (PostgreSQL)
 	err := storeMinerConfig(config, dbConfig)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store config in database: " + err.Error()})
@@ -161,9 +209,9 @@ func sendMinerCommand(c *gin.Context) {
 
     err := sendCommand(conn, controlCommand)
 
-    if err != nil{
-         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send command via TCP: " + err.Error()})
-         return
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send command via TCP: " + err.Error()})
+        return
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Command send successfully"})
@@ -197,14 +245,14 @@ func getMinerLogContent(clientId string) (string, error) {
 }
 
 func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
-	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
-	db, err := sql.Open("mysql", connStr)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
+    connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
+    db, err := sql.Open("mysql", connStr)
+    if err != nil {
+        return err
+    }
+    defer db.Close()
 
-	_, err = db.Exec(`
+    _, err = db.Exec(`
         CREATE TABLE IF NOT EXISTS miner_configs (
             miner_id VARCHAR(255) PRIMARY KEY,
             poolAddress VARCHAR(255) NOT NULL,
@@ -216,12 +264,12 @@ func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
             extraParams VARCHAR(255)
         )
     `)
-	if err != nil {
-		return err
-	}
+    if err != nil {
+        return err
+    }
 
-	// Prepare the insert statement
-	stmt, err := db.Prepare(`
+    // Prepare the insert statement
+    stmt, err := db.Prepare(`
         INSERT INTO miner_configs (miner_id, poolAddress, username, password, algorithm, autoSwitch, torEnabled, extraParams)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
@@ -233,31 +281,31 @@ func storeMinerConfig(config MinerConfig, dbConfig DatabaseConfig) error {
             torEnabled = ?, 
             extraParams = ?
     `)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
+    if err != nil {
+        return err
+    }
+    defer stmt.Close()
 
-	// Execute the insert statement
-	_, err = stmt.Exec(
-		config.MinerID,
-		config.PoolAddress,
-		config.Username,
-		config.Password,
-		config.Algorithm,
-		config.AutoSwitch,
-		config.TorEnabled,
-		config.ExtraParams,
-		config.PoolAddress,
-		config.Username,
-		config.Password,
-		config.Algorithm,
-		config.AutoSwitch,
-		config.TorEnabled,
-		config.ExtraParams,
-	)
+    // Execute the insert statement
+    _, err = stmt.Exec(
+        config.MinerID,
+        config.PoolAddress,
+        config.Username,
+        config.Password,
+        config.Algorithm,
+        config.AutoSwitch,
+        config.TorEnabled,
+        config.ExtraParams,
+        config.PoolAddress,
+        config.Username,
+        config.Password,
+        config.Algorithm,
+        config.AutoSwitch,
+        config.TorEnabled,
+        config.ExtraParams,
+    )
 
-	return err
+    return err
 }
 
 func generateXMRigConfig(config MinerConfig) (string, error) {
@@ -343,7 +391,7 @@ func tcpServerConnector() {
 		minerId = strings.TrimSpace(minerId) // Entferne Leerzeichen
 
 		minerConns.Store(minerId, conn)
-		go handleConnection(conn, &minerConns)
+		go handleConnection(conn, minerConns)
 
 	}
 }
@@ -360,7 +408,6 @@ func handleConnection(conn net.Conn, minerConns *sync.Map) {
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client disconnected")
-                //TODO muss auch aus der map entfernt werden
 				return
 			}
 			fmt.Println("Error reading message length:", err)
