@@ -89,8 +89,7 @@ func main() {
 	})
 	router.POST("/api/miner/command", sendMinerCommand)
 	router.GET("/api/client/log", getClientLog)
-
-	// Use port from environment or default to 8080
+	
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
